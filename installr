@@ -1,0 +1,80 @@
+#!/bin/bash
+
+## Flags:
+## -r to roxygenise.
+## -c to compile C++ code.
+## -t to compile TMB code.
+## -q to suppress testing.
+## -d to suppress cleaning.
+
+doroxygenise=false
+docompile=false
+docompiletmb=false
+dotest=true
+doclean=true
+while getopts ":cdqrt" opt; do
+    case $opt in
+	c)
+	    docompile=true
+	    ;;
+	d)
+	    doclean=false
+	    ;;
+	q)
+	    dotest=false
+	    ;;
+	r)
+	    doroxygenise=true
+	    ;;
+	t)
+	    docompiletmb=true
+	    ;;
+    esac
+done
+dir=${!OPTIND}
+## Throwing error for no argument provided.
+if [ -z "$dir" ]; then
+    echo "ERROR: No directory given." >&2
+    exit 1
+fi
+## Moving into directory.
+cd "$dir"
+## Getting package name.
+dirname=${PWD##*/}
+## Cleaning.
+if [ "$doclean" = true ]; then
+    echo "Cleaning..."
+    rm -rfv package-build
+fi
+## Roxygenisation.
+if [ "$doroxygenise" = true ]; then
+    echo "Roxygenising..."
+    rm -rfv man NAMESPACE
+    R --slave -e "library(roxygen2); roxygenise('.')"
+fi
+## Compiling C++ code.
+if [ "$docompile" = true ]; then
+    echo "Compiling C++ code..."
+    rm -rfv src/*.o src/RcppExports.cpp R/RcppExports.R
+    R --slave -e "library(Rcpp); compileAttributes()"
+    rm -rfv src/*.o src/*.so src/*.rds src-i386/ src-x64/
+fi
+## Building package.
+R CMD build .
+## Moving compressed package.
+mkdir -p package-build
+mv "$dirname"_*.tar.gz package-build/
+## Checking package.
+teststr="--no-tests"
+if [ "dotest" =  ]; then
+    teststr=""
+fi
+R CMD check package-build/"$dirname"_*.tar.gz "$teststr"
+## Installing package.
+R CMD INSTALL --install-tests package-build/"$dirname"_*.tar.gz
+## Compiling TMB code. Package must have a function named compile.[packagename]().
+if  [ "$docompiletmb" = true ]; then
+    echo "Compiling TMB code..."
+    tmbstr="library($dirname); compile.$dirname()"
+    R --slave -e "$tmbstr"
+fi
