@@ -10,15 +10,20 @@
 doroxygenise=false
 docompile=false
 docompiletmb=false
+doname=false
 dotest=true
 doclean=true
-while getopts ":cdqrt" opt; do
+while getopts ":cdn:qrt" opt; do
     case $opt in
 	c)
 	    docompile=true
 	    ;;
 	d)
 	    doclean=false
+	    ;;
+	n)
+	    dirname=$OPTARG
+	    doname=true
 	    ;;
 	q)
 	    dotest=false
@@ -31,7 +36,9 @@ while getopts ":cdqrt" opt; do
 	    ;;
     esac
 done
+
 dir=${!OPTIND}
+
 ## Throwing error for no argument provided.
 if [ -z "$dir" ]; then
     echo "ERROR: No directory given." >&2
@@ -40,7 +47,10 @@ fi
 ## Moving into directory.
 cd "$dir"
 ## Getting package name.
-dirname=${PWD##*/}
+if [ "$doname" = false ]; then
+    dirname=${PWD##*/}  
+fi
+echo "dirname is $dirname"
 ## Cleaning.
 if [ "$doclean" = true ]; then
     echo "Cleaning..."
