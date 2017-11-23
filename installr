@@ -3,6 +3,9 @@
 ## Flags:
 ## -r to roxygenise.
 ## -c to compile C++ code.
+## -f to do full CRAN checks.
+## -h to print help.
+## -n to provide package name.
 ## -t to compile TMB code.
 ## -q to suppress testing.
 ## -d to suppress cleaning.
@@ -10,16 +13,24 @@
 doroxygenise=false
 docompile=false
 docompiletmb=false
+dohelp=false
 doname=false
 dotest=true
 doclean=true
-while getopts ":cdn:qrt" opt; do
+docran=false
+while getopts ":cdfhn:qrt" opt; do
     case $opt in
 	c)
 	    docompile=true
 	    ;;
 	d)
 	    doclean=false
+	    ;;
+	f)
+	    docran=true
+	    ;;
+	h)
+	    dohelp=true
 	    ;;
 	n)
 	    dirname=$OPTARG
@@ -39,11 +50,23 @@ done
 
 dir=${!OPTIND}
 
+## Printing argument help.
+if [ "$dohelp" = true ]; then
+    echo "-r to roxygenise.
+-c to compile C++ code.
+-h to print help.
+-n to provide package name.
+-t to compile TMB code.
+-q to suppress testing.
+-d to suppress cleaning."
+fi
+
 ## Throwing error for no argument provided.
 if [ -z "$dir" ]; then
     echo "ERROR: No directory given." >&2
     exit 1
 fi
+
 ## Moving into directory.
 cd "$dir"
 ## Getting package name.
@@ -79,7 +102,12 @@ teststr="--no-tests"
 if [ "$dotest" = true ]; then
     teststr=""
 fi
-R CMD check package-build/"$dirname"_*.tar.gz "$teststr"
+cranstr=""
+if [ "$docran" = true ]; then
+    cranstr="--as-cran"
+fi
+
+R CMD check package-build/"$dirname"_*.tar.gz $cranstr $teststr
 ## Installing package.
 R CMD INSTALL --install-tests package-build/"$dirname"_*.tar.gz
 ## Compiling TMB code. Package must have a function named compile.[packagename]().
