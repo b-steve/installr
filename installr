@@ -82,14 +82,13 @@ fi
 ## Roxygenisation.
 if [ "$doroxygenise" = true ]; then
     echo "Roxygenising..."
-    rm -rfv man NAMESPACE
-    R --slave -e "library(roxygen2); roxygenise('.')"
+    R --slave -e "library(pkgbuild); compile_dll('.'); library(roxygen2); roxygenise('.')"
 fi
 ## Compiling C++ code.
 if [ "$docompile" = true ]; then
     echo "Compiling C++ code..."
     rm -rfv src/*.o src/RcppExports.cpp R/RcppExports.R
-    R --slave -e "library(Rcpp); compileAttributes()"
+    R --slave -e "library(Rcpp); compileAttributes('.')"
     rm -rfv src/*.o src/*.so src/*.rds src-i386/ src-x64/
 fi
 ## Building package.
